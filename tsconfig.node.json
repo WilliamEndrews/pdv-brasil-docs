@@ -1,0 +1,22 @@
+// tsconfig.node.json (VERSÃO FINAL CORRIGIDA)
+{
+  "compilerOptions": {
+    "composite": true,
+    "skipLibCheck": true,
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+    "allowSyntheticDefaultImports": true,
+
+    // [CORREÇÃO 1] Habilita o uso de .ts nas importações
+    "allowImportingTsExtensions": true,
+    "noEmit": true // Essencial, pois o ts-node compila em memória
+  },
+
+  // [CORREÇÃO 2] Inclui a pasta 'src' para que o servidor possa importar dela
+  "include": ["vite.config.ts", "server.ts", "src/lib/**/*.ts"],
+
+  "ts-node": {
+    "esm": true,
+    "experimentalSpecifierResolution": "node"
+  }
+}

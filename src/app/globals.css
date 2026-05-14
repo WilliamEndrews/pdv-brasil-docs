@@ -1,0 +1,33 @@
+/* app/globals.css */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* GRADIENTE PRIMÁRIO */
+.gradient-primary {
+  @apply bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600;
+}
+
+/* GRADIENTE SUCESSO */
+.gradient-success {
+  @apply bg-gradient-to-r from-green-500 to-emerald-600;
+}
+
+/* GRADIENTE SECUNDÁRIO */
+.gradient-secondary {
+  @apply bg-gradient-to-r from-orange-500 to-pink-600;
+}
+
+/* GLASSMORPHISM */
+.glass {
+  @apply bg-card/70 backdrop-blur-xl border border-border/50;
+}
+
+/* GLOW */
+.shadow-glow {
+  box-shadow: 0 0 20px rgba(99, 102, 241, 0.3);
+}
+
+.shadow-glow-success {
+  box-shadow: 0 0 20px rgba(34, 197, 94, 0.3);
+}

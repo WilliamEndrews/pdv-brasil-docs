@@ -1,28 +1,35 @@
 // src/components/OperatorBadge.tsx
-import { UserRole } from "@/store/authStore";
+import React from 'react';
+import { useAuth, UserRole } from '@/store/authStore';
 
 interface OperatorBadgeProps {
-  name: string;
-  role: UserRole;        // ← Alterado para aceitar todos os roles
+  role: UserRole;
 }
 
-export default function OperatorBadge({ name, role }: OperatorBadgeProps) {
-  const roleLabels: Record<UserRole, string> = {
-    admin: "Administrador",
-    gerente: "Gerente",
-    caixa: "Caixa",
-    estoque: "Estoque",
-    relatorios: "Relatórios",
-    visualizador: "Visualizador",
-  };
+const roleLabels: Record<UserRole, string> = {
+  admin: 'Administrador',
+  gerente: 'Gerente',
+  caixa: 'Caixa',
+  estoque: 'Estoquista',
+  relatorios: 'Relatórios',
+  operador: 'Operador',        // ← Adicionado aqui
+  visualizador: 'Visualizador'
+};
 
+const roleColors: Record<UserRole, string> = {
+  admin: 'bg-red-100 text-red-700',
+  gerente: 'bg-purple-100 text-purple-700',
+  caixa: 'bg-blue-100 text-blue-700',
+  estoque: 'bg-amber-100 text-amber-700',
+  relatorios: 'bg-emerald-100 text-emerald-700',
+  operador: 'bg-gray-100 text-gray-700',
+  visualizador: 'bg-slate-100 text-slate-700'
+};
+
+export default function OperatorBadge({ role }: OperatorBadgeProps) {
   return (
-    <div className="flex items-center gap-2 bg-card px-4 py-2 rounded-full border">
-      <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
-      <span className="font-medium">{name}</span>
-      <span className="text-xs text-muted-foreground px-2.5 py-0.5 bg-muted rounded-full">
-        {roleLabels[role] || role}
-      </span>
+    <div className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium ${roleColors[role]}`}>
+      {roleLabels[role]}
     </div>
   );
 }

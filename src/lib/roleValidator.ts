@@ -6,8 +6,11 @@ export const getRoleFromId = (id: string): UserRole | null => {
 
   if (id.includes("-ADMIN-")) return "admin";
   if (id.includes("-GER-")) return "gerente";
-  if (id.includes("-OP-")) return "operador";
-  if (id.includes("-CX-")) return "caixa";
+  if (id.includes("-CAI-")) return "caixa";
+  if (id.includes("-EST-")) return "estoque";
+  if (id.includes("-REL-")) return "relatorios";
+  if (id.includes("-OPE-")) return "operador";
+  if (id.includes("-VIS-")) return "visualizador";
 
   return null;
 };

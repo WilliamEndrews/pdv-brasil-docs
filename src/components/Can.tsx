@@ -1,5 +1,6 @@
 // src/components/Can.tsx
-import { useAuth, UserRole } from "@/store/authStore";
+import { useAuth } from "@/store/authStore";
+import { UserRole } from "@/types/user";
 import { ReactNode } from "react";
 
 interface CanProps {

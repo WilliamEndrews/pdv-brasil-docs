@@ -12,15 +12,18 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Separator } from "@/components/ui/separator";
 import PDVLogo from "@/components/PDVLogo";
-import { Mail, Lock, Chrome } from "lucide-react";
+import { Lock, Building2, User } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "@/store/authStore";
+import { useConfig } from "@/store/configStore";
+import { useTranslation } from "@/hooks/useTranslation";
 
 const Login = () => {
   const navigate = useNavigate();
   const { login } = useAuth();
+  const { configuracao } = useConfig();
+  const { t } = useTranslation();
   const [email, setEmail] = useState("");
   const [pin, setPin] = useState("");
   const [rememberDevice, setRememberDevice] = useState(false);
@@ -28,8 +31,15 @@ const Login = () => {
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!email || !pin) {
-      toast.error("Email e PIN são obrigatórios");
+    
+    // Validações com feedback claro
+    if (!email.trim()) {
+      toast.error(t('errors.required'));
+      return;
+    }
+
+    if (!pin || pin.length < 3) {
+      toast.error(t('errors.pinMinLength'));
       return;
     }
 
@@ -38,20 +48,16 @@ const Login = () => {
     try {
       const success = await login(email, pin);
       if (success) {
-        toast.success(`Bem-vindo, ${email.split("@")[0]}!`);
+        toast.success(t('login.loginButton'));
         navigate("/", { replace: true });
       } else {
-        toast.error("Credenciais inválidas");
+        toast.error(t('errors.loginError'));
       }
     } catch (error) {
-      toast.error("Erro ao fazer login");
+      toast.error(t('errors.saveError'));
     } finally {
       setIsLoading(false);
     }
-  };
-
-  const handleGoogleAuth = () => {
-    toast.info("Autenticação Google em desenvolvimento");
   };
 
   return (
@@ -66,7 +72,7 @@ const Login = () => {
               PDV Brasil
             </CardTitle>
             <CardDescription className="text-base mt-2">
-              Sistema Premium de Ponto de Venda
+              {t('login.subtitle')}
             </CardDescription>
           </div>
         </CardHeader>
@@ -75,32 +81,34 @@ const Login = () => {
           <form onSubmit={handleLogin} className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="email" className="text-sm font-medium">
-                Email
+                {t('login.emailLabel')}
               </Label>
               <div className="relative">
-                <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                 <Input
                   id="email"
-                  type="email"
-                  placeholder="admin@pdv.com"
+                  type="text"
+                  placeholder={t('login.emailPlaceholder')}
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   className="pl-10"
-                  required
                 />
               </div>
+              <p className="text-xs text-muted-foreground">
+                {t('login.emailHint')}
+              </p>
             </div>
 
             <div className="space-y-2">
               <Label htmlFor="pin" className="text-sm font-medium">
-                PIN
+                {t('login.pinLabel')}
               </Label>
               <div className="relative">
                 <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                 <Input
                   id="pin"
                   type="password"
-                  placeholder="••••"
+                  placeholder={t('login.pinPlaceholder')}
                   maxLength={4}
                   value={pin}
                   onChange={(e) => setPin(e.target.value.replace(/\D/g, ""))}
@@ -120,7 +128,7 @@ const Login = () => {
                 htmlFor="remember"
                 className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
               >
-                Lembrar este dispositivo
+                {t('login.rememberDevice')}
               </label>
             </div>
 
@@ -130,30 +138,25 @@ const Login = () => {
               size="lg"
               disabled={isLoading}
             >
-              {isLoading ? "Entrando..." : "Entrar"}
+              {isLoading ? t('common.loading') : t('login.loginButton')}
             </Button>
+
+            <div className="text-center">
+              <Button
+                type="button"
+                variant="ghost"
+                onClick={() => navigate("/register")}
+                className="text-sm text-primary hover:underline"
+              >
+                <Building2 className="w-4 h-4 mr-2" />
+                {t('login.registerButton')}
+              </Button>
+            </div>
           </form>
 
-          <div className="relative">
-            <Separator />
-            <span className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-card px-3 text-xs text-muted-foreground">
-              ou continue com
-            </span>
-          </div>
-
-          <Button
-            variant="outline"
-            className="w-full"
-            size="lg"
-            onClick={handleGoogleAuth}
-          >
-            <Chrome className="w-5 h-5 mr-2" />
-            Google
-          </Button>
-
           <div className="text-center text-xs text-muted-foreground pt-4 border-t">
-            <p>Conformidade SEFAZ-PE • Versão 1.0</p>
-            <p className="mt-1">© 2025 PDV Brasil. Todos os direitos reservados.</p>
+            <p>{t('login.compliance')}</p>
+            <p className="mt-1">{t('login.copyright', { company: configuracao.nomeEmpresa })}</p>
           </div>
         </CardContent>
       </Card>

@@ -73,7 +73,6 @@ const TopBar = ({ onSettingsClick }: TopBarProps) => {
   // ==========================================================================
   const quickActions = [
     // Ações comuns a todos
-    { icon: Camera, label: "Scanner AR", onClick: () => navigate("/scanner") },
     { icon: ShoppingBag, label: "Caixa", onClick: () => navigate("/caixa") },
     { icon: Users, label: "Fila", onClick: () => navigate("/fila") },
     { icon: BarChart3, label: "Relatórios", onClick: () => navigate("/relatorios") },

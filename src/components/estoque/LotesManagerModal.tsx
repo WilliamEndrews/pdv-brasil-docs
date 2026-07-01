@@ -6,7 +6,7 @@
 // - Reatividade instantânea mantida (setor, estoque, tabela, badges)
 // - Tela branca resolvida
 
-import React, { useMemo } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useForm, useWatch } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useEstoqueStore, loteFormSchema, NovoLoteData, Produto, Lote } from '@/store/estoqueStore';
@@ -23,6 +23,9 @@ import { Trash2, SplitSquareHorizontal, Warehouse, Store } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
 import { cn } from '@/lib/utils';
+import { CalculatorInput } from '@/components/ui/CalculatorInput';
+import { Checkbox } from '@/components/ui/checkbox';
+import { ConversoesManager } from './ConversoesManager';
 
 interface LotesManagerModalProps {
   produto: Produto | null;
@@ -33,6 +36,8 @@ interface LotesManagerModalProps {
 export function LotesManagerModal({ produto, open, onClose }: LotesManagerModalProps) {
   // ==================== HOOKS - SEMPRE NO TOPO ====================
   const adicionarLote = useEstoqueStore(state => state.adicionarLote);
+  const unidadesMedida = useEstoqueStore(state => state.unidadesMedida);
+  const getConversoesProduto = useEstoqueStore(state => state.getConversoesProduto);
   const excluirLote = useEstoqueStore(state => state.excluirLote);
   const editarProduto = useEstoqueStore(state => state.editarProduto);
   const fornecedores = useEstoqueStore(state => state.fornecedores);
@@ -53,6 +58,9 @@ export function LotesManagerModal({ produto, open, onClose }: LotesManagerModalP
       quantidadeDeposito: 0,
       quantidadeLoja: 0,
       precoCusto: 0,
+      margemLucro: 0,
+      atualizarPrecoVenda: false,
+      unidadeMedidaEntrada: 'UN',
       dataValidade: '',
       dataEntrada: new Date().toISOString().split('T')[0],
       numeroLoteFornecedor: '',
@@ -64,6 +72,7 @@ export function LotesManagerModal({ produto, open, onClose }: LotesManagerModalP
 
   const qtdDep = useWatch({ control: form.control, name: 'quantidadeDeposito' }) || 0;
   const qtdLoja = useWatch({ control: form.control, name: 'quantidadeLoja' }) || 0;
+  const [conversoesOpen, setConversoesOpen] = useState(false);
 
   React.useEffect(() => {
     const total = qtdDep + qtdLoja;
@@ -106,11 +115,12 @@ export function LotesManagerModal({ produto, open, onClose }: LotesManagerModalP
       : 'exceeded';
 
   return (
-    <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="max-w-5xl max-h-[90vh] overflow-hidden flex flex-col p-0">
-        <DialogHeader className="px-6 py-4 border-b bg-muted/50">
-          <DialogTitle>Lotes do Produto: {produtoAtual.nome}</DialogTitle>
-        </DialogHeader>
+    <>
+      <Dialog open={open} onOpenChange={onClose}>
+        <DialogContent className="max-w-5xl max-h-[90vh] overflow-hidden flex flex-col p-0">
+          <DialogHeader className="px-6 py-4 border-b bg-muted/50">
+            <DialogTitle>Lotes do Produto: {produtoAtual.nome}</DialogTitle>
+          </DialogHeader>
 
         {/* Select de setor */}
         <div className="px-6 py-3 border-b bg-muted/30">
@@ -243,9 +253,9 @@ export function LotesManagerModal({ produto, open, onClose }: LotesManagerModalP
                     <FormItem>
                       <FormLabel>Quantidade Total do Lote</FormLabel>
                       <FormControl>
-                        <Input 
-                          type="number" 
-                          min="0" 
+                        <Input
+                          type="number"
+                          min="0"
                           readOnly
                           className={cn(
                             "bg-gray-50 font-medium cursor-default text-center",
@@ -262,6 +272,67 @@ export function LotesManagerModal({ produto, open, onClose }: LotesManagerModalP
                     </FormItem>
                   )}
                 />
+
+                {/* Unidade de Medida de Entrada */}
+                <FormField
+                  control={form.control}
+                  name="unidadeMedidaEntrada"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Unidade de Medida de Entrada</FormLabel>
+                      <Select onValueChange={field.onChange} defaultValue={field.value}>
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Selecione a unidade" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {unidadesMedida.filter(u => u.ativo).map((unidade) => (
+                            <SelectItem key={unidade.id} value={unidade.abreviatura}>
+                              {unidade.descricao} ({unidade.abreviatura})
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                {/* Botão para gerenciar conversões */}
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setConversoesOpen(true)}
+                  className="w-full"
+                >
+                  Gerenciar Conversões de Unidade
+                </Button>
+
+                {/* Preview de conversão */}
+                {(() => {
+                  const unidadeEntrada = form.watch('unidadeMedidaEntrada');
+                  const quantidadeTotal = form.watch('quantidadeTotal');
+                  const conversoes = getConversoesProduto(produtoAtual.id);
+                  const conversao = conversoes.find(
+                    c => c.unidadeOrigem === unidadeEntrada && c.unidadeDestino === produtoAtual.unidadeMedidaPadrao
+                  );
+
+                  if (conversao && quantidadeTotal > 0) {
+                    const qtdConvertida = quantidadeTotal * conversao.fatorMultiplicador;
+                    return (
+                      <div className="p-4 bg-green-50 border border-green-200 rounded-lg">
+                        <p className="text-sm font-medium text-green-900">
+                          Conversão: {quantidadeTotal} {unidadeEntrada} = <span className="text-lg font-bold">{qtdConvertida} {produtoAtual.unidadeMedidaPadrao}</span>
+                        </p>
+                        <p className="text-xs text-green-700 mt-1">
+                          Fator: {conversao.fatorMultiplicador} (1 {unidadeEntrada} = {conversao.fatorMultiplicador} {produtoAtual.unidadeMedidaPadrao})
+                        </p>
+                      </div>
+                    );
+                  }
+                  return null;
+                })()}
 
                 {/* Divisão Depósito + Loja */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -312,18 +383,75 @@ export function LotesManagerModal({ produto, open, onClose }: LotesManagerModalP
                     <FormItem>
                       <FormLabel>Preço de Custo (R$)</FormLabel>
                       <FormControl>
-                        <Input 
-                          type="number" 
-                          step="0.01" 
-                          min="0" 
-                          {...field} 
-                          onChange={e => field.onChange(parseFloat(e.target.value) || 0)} 
+                        <CalculatorInput
+                          value={field.value}
+                          onChange={field.onChange}
+                          placeholder="10,00"
                         />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
                   )}
                 />
+
+                {/* Margem de Lucro */}
+                <FormField
+                  control={form.control}
+                  name="margemLucro"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Margem de Lucro (%)</FormLabel>
+                      <FormControl>
+                        <Input
+                          type="number"
+                          min="0"
+                          max="100"
+                          step="0.1"
+                          {...field}
+                          onChange={e => field.onChange(parseFloat(e.target.value) || 0)}
+                          placeholder="Ex: 30 para 30%"
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                {/* Checkbox para atualizar preço de venda */}
+                <FormField
+                  control={form.control}
+                  name="atualizarPrecoVenda"
+                  render={({ field }) => (
+                    <FormItem className="flex flex-row items-start space-x-3 space-y-0">
+                      <FormControl>
+                        <Checkbox
+                          checked={field.value}
+                          onCheckedChange={field.onChange}
+                        />
+                      </FormControl>
+                      <div className="space-y-1 leading-none">
+                        <FormLabel>Atualizar Preço de Venda do Produto</FormLabel>
+                        <p className="text-sm text-muted-foreground">
+                          Se marcado, o preço de venda será calculado automaticamente: Custo × (1 + Margem%)
+                        </p>
+                      </div>
+                    </FormItem>
+                  )}
+                />
+
+                {/* Preview do preço de venda calculado */}
+                {(form.watch('atualizarPrecoVenda') && form.watch('precoCusto') > 0 && form.watch('margemLucro') > 0) && (
+                  <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                    <p className="text-sm font-medium text-blue-900">
+                      Preço de Venda Calculado: <span className="text-lg font-bold">
+                        R$ {(form.watch('precoCusto') * (1 + form.watch('margemLucro') / 100)).toFixed(2)}
+                      </span>
+                    </p>
+                    <p className="text-xs text-blue-700 mt-1">
+                      Baseado em: Custo R$ {form.watch('precoCusto').toFixed(2)} + Margem {form.watch('margemLucro')}%
+                    </p>
+                  </div>
+                )}
 
                 {/* Datas */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -428,5 +556,14 @@ export function LotesManagerModal({ produto, open, onClose }: LotesManagerModalP
         </div>
       </DialogContent>
     </Dialog>
+
+    {/* Modal de Conversões */}
+    <ConversoesManager
+      produtoId={produtoAtual.id}
+      produtoNome={produtoAtual.nome}
+      open={conversoesOpen}
+      onClose={() => setConversoesOpen(false)}
+    />
+    </>
   );
 }

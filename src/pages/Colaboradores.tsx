@@ -1,5 +1,5 @@
-// src/pages/Colaboradores.tsx (VERSÃO 2.0 - GERENCIAMENTO COMPLETO E INTEGRADO)
-// Última atualização: 27/04/2026
+// src/pages/Colaboradores.tsx (VERSÃO 3.0 - INTEGRADO COM SISTEMA DE PONTO)
+// Última atualização: 27/05/2026
 // Funcionalidades:
 // - Proteção total: apenas Admin e Gerente podem acessar
 // - Lista completa com DataTable
@@ -7,10 +7,14 @@
 // - Filtros por Cargo (Role) e Status
 // - Toggle de Ativar/Desativar (não exclui, mantém histórico)
 // - Campos: Nome, Email, PIN, Role, Data de Admissão, Status, Último IP
-// - Totalmente integrado com o sistema de hierarquia (RBAC)
+// - Campos de Ponto: Turno, Foto, Pontos Acumulados, Nível de Gamificação, Badges
+// - Totalmente integrado com o sistema de ponto
+// - Usa store compartilhado (colaboradorStore)
 
 import { useState } from "react";
-import { useAuth, UserRole } from "@/store/authStore";
+import { useAuth } from "@/store/authStore";
+import { useColaboradorStore, Colaborador } from "@/store/colaboradorStore";
+import { UserRole } from "@/types/user";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -20,55 +24,18 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Label } from "@/components/ui/label";
 import { DataTable } from "@/components/ui/data-table";
 import { toast } from "sonner";
-import { Plus, Edit, UserCheck, UserX } from "lucide-react";
+import { Plus, Edit, UserCheck, UserX, Clock, Award, Trophy } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
-interface Colaborador {
-  id: string;
-  nome: string;
-  email: string;
-  pin: string;
-  role: UserRole;
-  dataAdmissao: string;
-  status: 'ativo' | 'inativo';
-  ultimoIP?: string;
-  ultimoAcesso?: string;
-}
-
-const mockColaboradores: Colaborador[] = [
-  { 
-    id: "1", 
-    nome: "Guilherme Endrews", 
-    email: "admin@pdv.com", 
-    pin: "123", 
-    role: "admin", 
-    dataAdmissao: "2025-01-10", 
-    status: "ativo", 
-    ultimoIP: "179.190.XXX.XXX" 
-  },
-  { 
-    id: "2", 
-    nome: "Maria Silva", 
-    email: "gerente@pdv.com", 
-    pin: "456", 
-    role: "gerente", 
-    dataAdmissao: "2025-02-05", 
-    status: "ativo" 
-  },
-  { 
-    id: "3", 
-    nome: "João Santos", 
-    email: "caixa@pdv.com", 
-    pin: "789", 
-    role: "caixa", 
-    dataAdmissao: "2025-03-15", 
-    status: "ativo" 
-  },
-];
-
 export default function Colaboradores() {
   const { hasPermission } = useAuth();
+  const {
+    colaboradores,
+    addColaborador,
+    updateColaborador,
+    toggleStatus
+  } = useColaboradorStore();
 
   // Proteção de rota
   if (!hasPermission(['admin', 'gerente'])) {
@@ -82,7 +49,6 @@ export default function Colaboradores() {
     );
   }
 
-  const [colaboradores, setColaboradores] = useState<Colaborador[]>(mockColaboradores);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [colaboradorEditando, setColaboradorEditando] = useState<Colaborador | null>(null);
 
@@ -98,6 +64,9 @@ export default function Colaboradores() {
     role: "caixa" as UserRole,
     dataAdmissao: new Date().toISOString().split('T')[0],
     status: "ativo" as 'ativo' | 'inativo',
+    cargo: "",
+    turnoInicio: "08:00",
+    turnoFim: "17:00",
   });
 
   const resetForm = () => {
@@ -108,6 +77,9 @@ export default function Colaboradores() {
       role: "caixa",
       dataAdmissao: new Date().toISOString().split('T')[0],
       status: "ativo",
+      cargo: "",
+      turnoInicio: "08:00",
+      turnoFim: "17:00",
     });
     setColaboradorEditando(null);
   };
@@ -119,18 +91,10 @@ export default function Colaboradores() {
     }
 
     if (colaboradorEditando) {
-      setColaboradores(prev => prev.map(c =>
-        c.id === colaboradorEditando.id ? { ...c, ...formData } : c
-      ));
+      updateColaborador(colaboradorEditando.id, formData);
       toast.success("Colaborador atualizado com sucesso!");
     } else {
-      const novo: Colaborador = {
-        id: `col-${Date.now()}`,
-        ...formData,
-        ultimoIP: "179.190.XXX.XXX",
-        ultimoAcesso: new Date().toISOString(),
-      };
-      setColaboradores(prev => [...prev, novo]);
+      addColaborador(formData);
       toast.success("Colaborador cadastrado com sucesso!");
     }
 
@@ -147,14 +111,15 @@ export default function Colaboradores() {
       role: colaborador.role,
       dataAdmissao: colaborador.dataAdmissao,
       status: colaborador.status,
+      cargo: colaborador.cargo || "",
+      turnoInicio: colaborador.turnoInicio || "08:00",
+      turnoFim: colaborador.turnoFim || "17:00",
     });
     setIsModalOpen(true);
   };
 
   const handleToggleStatus = (id: string) => {
-    setColaboradores(prev => prev.map(c =>
-      c.id === id ? { ...c, status: c.status === 'ativo' ? 'inativo' : 'ativo' } : c
-    ));
+    toggleStatus(id);
     toast.success("Status atualizado com sucesso!");
   };
 
@@ -171,8 +136,43 @@ export default function Colaboradores() {
     { accessorKey: "email", header: "E-mail" },
     {
       accessorKey: "role",
-      header: "Cargo",
+      header: "Cargo (Role)",
       cell: ({ row }: any) => <Badge variant="outline">{row.original.role.toUpperCase()}</Badge>
+    },
+    {
+      accessorKey: "cargo",
+      header: "Cargo Descritivo",
+      cell: ({ row }: any) => row.original.cargo || "-"
+    },
+    {
+      accessorKey: "turno",
+      header: "Turno",
+      cell: ({ row }: any) => (
+        <div className="flex items-center gap-1 text-sm">
+          <Clock className="h-3 w-3" />
+          {row.original.turnoInicio} - {row.original.turnoFim}
+        </div>
+      )
+    },
+    {
+      accessorKey: "pontos",
+      header: "Pontos",
+      cell: ({ row }: any) => (
+        <div className="flex items-center gap-1">
+          <Award className="h-4 w-4 text-amber-500" />
+          <span className="font-semibold">{row.original.pontosAcumulados || 0}</span>
+        </div>
+      )
+    },
+    {
+      accessorKey: "badges",
+      header: "Badges",
+      cell: ({ row }: any) => (
+        <div className="flex items-center gap-1">
+          <Trophy className="h-4 w-4 text-purple-500" />
+          <span className="text-sm">{row.original.badges?.length || 0}</span>
+        </div>
+      )
     },
     {
       accessorKey: "dataAdmissao",
@@ -289,6 +289,34 @@ export default function Colaboradores() {
                   value={formData.dataAdmissao}
                   onChange={(e) => setFormData({ ...formData, dataAdmissao: e.target.value })}
                 />
+              </div>
+
+              <div>
+                <Label>Cargo Descritivo</Label>
+                <Input
+                  value={formData.cargo}
+                  onChange={(e) => setFormData({ ...formData, cargo: e.target.value })}
+                  placeholder="Ex: Caixa Sênior"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label>Turno Início</Label>
+                  <Input
+                    type="time"
+                    value={formData.turnoInicio}
+                    onChange={(e) => setFormData({ ...formData, turnoInicio: e.target.value })}
+                  />
+                </div>
+                <div>
+                  <Label>Turno Fim</Label>
+                  <Input
+                    type="time"
+                    value={formData.turnoFim}
+                    onChange={(e) => setFormData({ ...formData, turnoFim: e.target.value })}
+                  />
+                </div>
               </div>
 
               <Button onClick={handleSave} className="w-full">

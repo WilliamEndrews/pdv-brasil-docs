@@ -4,6 +4,7 @@
 // - Botão "Excluir" agora chama a ação real do store (excluirProduto)
 // - Adicionada confirmação + toast de sucesso
 // - Mantida compatibilidade com onEdit, onAddLote e onTransfer
+// - Adicionado tooltip de conversões nas colunas de estoque
 
 "use client";
 
@@ -21,6 +22,7 @@ import {
 import { Produto, useEstoqueStore } from "@/store/estoqueStore";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
+import { QuantidadeTooltip } from "./QuantidadeTooltip";
 
 const getEstoqueLoja = (produto: Produto) => {
   return produto.lotes.reduce((total, lote) => {
@@ -53,12 +55,26 @@ export const columns = (
   {
     id: "estoqueLoja",
     header: "Estoque Loja",
-    cell: ({ row }) => getEstoqueLoja(row.original),
+    cell: ({ row }) => {
+      const quantidade = getEstoqueLoja(row.original);
+      return (
+        <QuantidadeTooltip produto={row.original} quantidade={quantidade}>
+          {quantidade}
+        </QuantidadeTooltip>
+      );
+    },
   },
   {
     id: "estoqueDeposito",
     header: "Estoque Depósito",
-    cell: ({ row }) => getEstoqueDeposito(row.original),
+    cell: ({ row }) => {
+      const quantidade = getEstoqueDeposito(row.original);
+      return (
+        <QuantidadeTooltip produto={row.original} quantidade={quantidade}>
+          {quantidade}
+        </QuantidadeTooltip>
+      );
+    },
   },
   {
     accessorKey: "precoVenda",

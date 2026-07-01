@@ -8,12 +8,15 @@ interface CalculatorInputProps {
   onChange: (value: number) => void;
   placeholder?: string;
   className?: string;
+  onFocus?: () => void;
+  onKeyDown?: (e: React.KeyboardEvent<HTMLDivElement>) => void;
 }
 
 // [A CORREÇÃO] - A palavra 'export' foi adicionada aqui, criando uma exportação nomeada.
-export function CalculatorInput({ value, onChange, placeholder, className }: CalculatorInputProps) {
+export const CalculatorInput = React.forwardRef<HTMLDivElement, CalculatorInputProps>(({ value, onChange, placeholder, className, onFocus, onKeyDown }, ref) => {
   const [displayValue, setDisplayValue] = React.useState('R$ 0,00');
   const [digits, setDigits] = React.useState('');
+  const [isFocused, setIsFocused] = React.useState(false);
 
   React.useEffect(() => {
     const initialValue = value || 0;
@@ -23,15 +26,22 @@ export function CalculatorInput({ value, onChange, placeholder, className }: Cal
   }, [value]);
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
-    e.preventDefault();
-    if (e.key >= '0' && e.key <= '9') {
-      updateValue(digits + e.key);
+    if (onKeyDown) {
+      onKeyDown(e);
     }
-    if (e.key === 'Backspace') {
-      updateValue(digits.slice(0, -1));
-    }
-    if (e.key === 'Delete' || e.key === 'Clear') {
-      updateValue('');
+    
+    // Se não for seta de navegação, processa como input
+    if (!['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.key)) {
+      e.preventDefault();
+      if (e.key >= '0' && e.key <= '9') {
+        updateValue(digits + e.key);
+      }
+      if (e.key === 'Backspace') {
+        updateValue(digits.slice(0, -1));
+      }
+      if (e.key === 'Delete' || e.key === 'Clear') {
+        updateValue('');
+      }
     }
   };
 
@@ -46,14 +56,23 @@ export function CalculatorInput({ value, onChange, placeholder, className }: Cal
 
   return (
     <div
+      ref={ref}
       tabIndex={0}
       onKeyDown={handleKeyDown}
+      onFocus={() => {
+        setIsFocused(true);
+        if (onFocus) onFocus();
+      }}
+      onBlur={() => setIsFocused(false)}
       className={cn(
         "flex h-10 w-full items-center justify-start rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50",
+        isFocused && "ring-2 ring-ring ring-offset-2",
         className
       )}
     >
       {displayValue}
     </div>
   );
-}
+});
+
+CalculatorInput.displayName = 'CalculatorInput';

@@ -17,8 +17,10 @@ interface TransferModalProps {
 
 export function TransferModal({ produto, open, onClose }: TransferModalProps) {
   const transferirParaLoja = useEstoqueStore(state => state.transferirParaLoja);
+  const unidadesMedida = useEstoqueStore(state => state.unidadesMedida);
   const [loteIdSelecionado, setLoteIdSelecionado] = useState<string>('');
   const [quantidade, setQuantidade] = useState<number>(0);
+  const [unidadeSelecionada, setUnidadeSelecionada] = useState<string>('UN');
 
   if (!produto) return null;
 
@@ -32,12 +34,13 @@ export function TransferModal({ produto, open, onClose }: TransferModalProps) {
       return;
     }
 
-    const sucesso = transferirParaLoja(produto.id, loteIdSelecionado, quantidade);
+    const sucesso = transferirParaLoja(produto.id, loteIdSelecionado, quantidade, unidadeSelecionada);
 
     if (sucesso) {
-      toast.success(`Transferidos ${quantidade} unidades para a loja!`);
+      toast.success(`Transferidos ${quantidade} ${unidadeSelecionada} para a loja!`);
       setQuantidade(0);
       setLoteIdSelecionado('');
+      setUnidadeSelecionada('UN');
       onClose();
     } else {
       toast.error("Quantidade insuficiente no depósito ou lote inválido");
@@ -79,6 +82,22 @@ export function TransferModal({ produto, open, onClose }: TransferModalProps) {
               value={quantidade}
               onChange={(e) => setQuantidade(Math.max(0, parseInt(e.target.value) || 0))}
             />
+          </div>
+
+          <div>
+            <Label>Unidade de Medida</Label>
+            <Select value={unidadeSelecionada} onValueChange={setUnidadeSelecionada}>
+              <SelectTrigger>
+                <SelectValue placeholder="Selecione a unidade" />
+              </SelectTrigger>
+              <SelectContent>
+                {unidadesMedida.filter(u => u.ativo).map((unidade) => (
+                  <SelectItem key={unidade.id} value={unidade.abreviatura}>
+                    {unidade.descricao} ({unidade.abreviatura})
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
 
           <div className="flex justify-end gap-3 pt-4">

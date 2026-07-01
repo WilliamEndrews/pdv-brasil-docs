@@ -12,6 +12,7 @@ export interface Item {
   nome: string;
   precoVenda: number;          // Preço unitário de venda (consistente com Produto)
   quantidade: number;          // Quantidade no carrinho
+  unidadeMedida?: string;       // Nova: unidade de medida usada na venda (ex: CX, FD, UN)
   codigoBarras?: string;       // Opcional - usado para busca/scanner
   // Pode adicionar mais campos se necessário (ex.: descontoItem, subtotalItem)
 }

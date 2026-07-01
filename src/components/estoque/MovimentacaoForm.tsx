@@ -16,6 +16,7 @@ interface MovimentacaoFormProps {
 export function MovimentacaoForm({ onSuccess }: MovimentacaoFormProps) {
  const produtos = useEstoqueStore(state => state.produtos);
 const registrarMovimentacaoManual = useEstoqueStore(state => state.registrarMovimentacaoManual);
+const unidadesMedida = useEstoqueStore(state => state.unidadesMedida);
 
   const form = useForm<MovimentacaoFormData>({
     resolver: zodResolver(movimentacaoFormSchema),
@@ -23,6 +24,7 @@ const registrarMovimentacaoManual = useEstoqueStore(state => state.registrarMovi
       produtoId: "",
       tipo: "saida_perda",
       quantidade: 0,
+      unidadeMedida: "UN",
       observacao: "",
     },
   });
@@ -91,8 +93,33 @@ const registrarMovimentacaoManual = useEstoqueStore(state => state.registrarMovi
           name="quantidade"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Quantidade (em unidades)</FormLabel>
+              <FormLabel>Quantidade</FormLabel>
               <FormControl><Input type="number" {...field} /></FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
+        <FormField
+          control={form.control}
+          name="unidadeMedida"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Unidade de Medida</FormLabel>
+              <Select onValueChange={field.onChange} defaultValue={field.value}>
+                <FormControl>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecione a unidade" />
+                  </SelectTrigger>
+                </FormControl>
+                <SelectContent>
+                  {unidadesMedida.filter(u => u.ativo).map((unidade) => (
+                    <SelectItem key={unidade.id} value={unidade.abreviatura}>
+                      {unidade.descricao} ({unidade.abreviatura})
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
               <FormMessage />
             </FormItem>
           )}

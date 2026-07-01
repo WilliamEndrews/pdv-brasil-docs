@@ -1,11 +1,14 @@
 // src/store/collaboratorsStore.ts
+// Store de Gerenciamento de Colaboradores - Completo e Tipado
+
 import { create } from "zustand";
-import { User } from "@/types/user";
+import { User, UserRole } from "@/types/user";
 import { generateCollaboratorId } from "@/lib/idGenerator";
 
 interface Collaborator extends User {
   status: "active" | "inactive";
   createdAt: string;
+  photo?: string;
 }
 
 interface CollaboratorsState {
@@ -15,6 +18,17 @@ interface CollaboratorsState {
   remove: (id: string) => void;
   toggleStatus: (id: string) => void;
 }
+
+// Prefixos para geração de IDs por role
+const rolePrefix: Record<UserRole, string> = {
+  admin: 'ADM',
+  gerente: 'GER',
+  caixa: 'CAI',
+  estoque: 'EST',
+  relatorios: 'REL',
+  operador: 'OPE',
+  visualizador: 'VIS'
+};
 
 export const useCollaborators = create<CollaboratorsState>((set) => ({
   collaborators: [

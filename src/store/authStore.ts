@@ -1,30 +1,14 @@
-// src/store/authStore.ts (VERSÃO 3.2 - TIPOS CENTRALIZADOS)
-// Última atualização: 27/04/2026
+// src/store/authStore.ts (VERSÃO 4.0 - TIPOS CENTRALIZADOS EM types/user.ts)
+// Última atualização: 16/05/2026
 // Mudanças:
-// - Tipos User e UserRole centralizados aqui (única fonte de verdade)
-// - Removida dependência de src/types/user.ts
+// - Tipos User e UserRole agora importados de src/types/user.ts (única fonte de verdade)
 // - hasPermission e hasAnyPermission mais claros e seguros
 // - Comentários completos em português
 
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
-
-// ==================== TIPOS DE USUÁRIO E ROLES (ÚNICA FONTE) ====================
-export type UserRole = 
-  | 'admin'        // Acesso total ao sistema
-  | 'gerente'      // Gerencia estoque, fornecedores, relatórios e equipe
-  | 'caixa'        // Apenas tela de Caixa e finalização de vendas
-  | 'estoque'      // Gestão completa de estoque, lotes e transferências
-  | 'relatorios'   // Apenas visualização de relatórios e métricas
-  | 'visualizador';// Acesso somente leitura (dashboards)
-
-export interface User {
-  id: string;
-  name: string;
-  email: string;
-  role: UserRole;
-  // photo?: string;   // pode ser adicionado futuramente
-}
+import { User, UserRole } from "@/types/user";
+import { useEmpresaStore } from "./empresaStore";
 
 // ==========================================================================
 // INTERFACE DO ESTADO
@@ -56,12 +40,38 @@ export const useAuth = create<AuthState>()(
       rememberDevice: false,
       isLoading: true,
 
-      login: async (email: string, pin: string) => {
+      login: async (identifier: string, pin: string) => {
         await new Promise((r) => setTimeout(r, 600));
 
-        const foundUser = mockUsers[email];
+        // Tentar login com mock users (colaboradores)
+        const foundUser = mockUsers[identifier];
         if (foundUser && pin === "123") {
           set({ user: foundUser, isLoading: false });
+          return true;
+        }
+
+        // Tentar login com empresas cadastradas
+        const empresaStore = useEmpresaStore.getState();
+        let empresa = empresaStore.getEmpresaPorEmail(identifier);
+        
+        if (!empresa) {
+          empresa = empresaStore.getEmpresaPorCNPJ(identifier);
+        }
+        
+        if (!empresa) {
+          empresa = empresaStore.getEmpresaPorNomeAcesso(identifier);
+        }
+
+        if (empresa) {
+          // Criar usuário admin para a empresa
+          const adminUser: User = {
+            id: empresa.id,
+            name: empresa.nome,
+            email: empresa.email,
+            role: "admin",
+          };
+          set({ user: adminUser, isLoading: false });
+          empresaStore.setEmpresaAtual(empresa);
           return true;
         }
 
